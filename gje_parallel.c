@@ -32,11 +32,12 @@ int main(int argc, char *argv[]) {
 	row_index = malloc(size * sizeof(int));
 	
 	// See about making this part parallel (Starting)
-	# pragma omp parallel for 
+	# pragma omp parallel for num_threads(thread_count)
 	for (i = 0; i < size; ++i) {
 		row_index[i] = i;
 	}
-	
+
+
 	if (size == 1) {
         result_mat[0] = initial_mat[0][1] / initial_mat[0][0];
 	}
@@ -44,16 +45,12 @@ int main(int argc, char *argv[]) {
 	else {
 		GET_TIME(start_time);
 		/*Gaussian elimination*/
-		largest = 0;		
-		printf("qqq\n");	
-		# pragma omp parallel private (temp_row_index_max, temp_row_value_max) num_threads(thread_count) reduction(max:largest)
-		{
-    		printf("qqq\n");    
-			for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
-				printf("diagonal_index: %i\n", diagonal_index);
-				// Pivoting
-				temp_row_index_max = diagonal_index;
-				temp_row_value_max = 0;
+    	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
+			// Pivoting
+			temp_row_index_max = diagonal_index;
+			temp_row_value_max = 0;
+			# pragma omp parallel num_threads(thread_count) reduction(max:largest)
+			{			
 				# pragma omp for
 				for (row = diagonal_index; row < size; row++) {
 					if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
@@ -66,43 +63,43 @@ int main(int argc, char *argv[]) {
 						largest = temp_row_value_max;					
 					}
 				}
-				// Swap
-				if (diagonal_index != temp_row_index_max) {
-					temp = row_index[diagonal_index];
-					row_index[diagonal_index] = row_index[temp_row_index_max];
-					row_index[temp_row_index_max] = temp;
-				}
-
-				# pragma omp for private(factorial_elim)
-				for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {				
-					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-									 initial_mat[row_index[diagonal_index]][diagonal_index];
-					for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-						initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
-						initial_mat[row_index[diagonal_index]][column_elim_index];
-					}
-				}
+			}
+			// Swap
+			if (diagonal_index != temp_row_index_max) {
+				temp = row_index[diagonal_index];
+				row_index[diagonal_index] = row_index[temp_row_index_max];
+				row_index[temp_row_index_max] = temp;
 			}
 
-			// Jordan Elimination
-			for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
-				# pragma omp for private(factorial_elim)
-				for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
-					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-									 initial_mat[row_index[diagonal_index]][diagonal_index];
-					initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
-					initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
+			# pragma omp parallel for private(factorial_elim, column_elim_index) num_threads(thread_count) shared(initial_mat, row_index, diagonal_index)
+			for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
+				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+								 initial_mat[row_index[diagonal_index]][diagonal_index];			
+				for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+					initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
+					initial_mat[row_index[diagonal_index]][column_elim_index];
 				}
-			}
-		
-			# pragma omp for
-			for (i = 0; i < size; i++) {
-				result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
 			}
 		}
+
+		// Jordan Elimination
+		for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
+			# pragma omp parallel for private(factorial_elim) num_threads(thread_count)			
+			for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
+				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+								 initial_mat[row_index[diagonal_index]][diagonal_index];
+				initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
+				initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
+			}
+		}
+	
+		# pragma omp parallel for num_threads(thread_count)
+		for (i = 0; i < size; i++) {
+			result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
+		}
+
 		GET_TIME(end_time);
 	}
-	
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
 	return 0;
 }

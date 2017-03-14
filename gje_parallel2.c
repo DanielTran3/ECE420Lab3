@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 				row_index[temp_row_index_max] = temp;
 			}
 
-			# pragma omp parallel for private(factorial_elim) num_threads(thread_count) shared(initial_mat, row_index, diagonal_index)
+			# pragma omp parallel for private(factorial_elim, column_elim_index) num_threads(thread_count) shared(initial_mat, row_index, diagonal_index)
 			for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
 				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
 								 initial_mat[row_index[diagonal_index]][diagonal_index];			
