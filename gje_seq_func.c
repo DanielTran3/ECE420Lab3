@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <omp.h>
 #include "Lab3IO.h"
 #include "timer.h"
 
@@ -12,15 +11,14 @@ void store_result(double **initial_mat, double* result_mat, int* row_index, int 
 
 int main(int argc, char *argv[]) {
 	
-	# pragma omp_set_num_threads(atoi(argv[1]));
-	int thread_count = atoi(argv[1]);
 	double **initial_mat;
 	double* result_mat;
 	int* row_index;
 	int size_check;
-	int i, row, column, temp, temp_row_index_max, temp_row_value_max, diagonal_index, row_elim_index, column_elim_index, size;
-	double start_time, end_time, factorial_elim, largest;
+	int i, row, column, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
+	double start_time, end_time, factorial_elim;
 	FILE* fp;
+	
 	Lab3LoadInput(&initial_mat, &size);
 	if ((fp = fopen("data_input","r")) == NULL){
 		printf("Fail to open the result data file!\n");
@@ -35,15 +33,7 @@ int main(int argc, char *argv[]) {
 	result_mat = CreateVec(size);
 
 	row_index = malloc(size * sizeof(int));
-	
-	// See about making this part parallel (Starting)
-	# pragma omp parallel for 
-	{
-		for (i = 0; i < size; ++i) {
-			row_index[i] = i;
-		}
-	}
-
+	fill_in_matrix(row_index, size);
 
 	if (size == 1) {
         result_mat[0] = initial_mat[0][1] / initial_mat[0][0];
@@ -51,41 +41,31 @@ int main(int argc, char *argv[]) {
 
 	else {
 		GET_TIME(start_time);
-		/*Gaussian elimination*/
-		# pragma omp single parallel private (temp_row_index_max, temp_row_value_max) num_threads(thread_count)
-		{
-			# pragma omp task
-        	gaussian_elim();
-			
-			# pragma omp task
-			// Jordan Elimination
-			jordan_elim();
+		// Gaussian elimination
+		gaus_elim(initial_mat, row_index, size);
 		
-			# pragma omp task
-			store_result();
-		}
+		// Jordan Elimination
+		jord_elim(initial_mat, row_index, size);
+		
+		// Store Result
+		store_result(initial_mat, result_mat, row_index, size);
+	
 		GET_TIME(end_time);
 	}
+
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
 }
 
 void gaus_elim(double** initial_mat, int* row_index, int size) {
 	int diagonal_index, row, temp, row_elim_index, column_elim_index, temp_row_index_max;
-	double factorial_elim, largest;
+	double factorial_elim;
 	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
 		// Pivoting
 		temp_row_index_max = diagonal_index;
-		# pragma omp parallel reduction(max:largest)
-		{
-			# pragma omp task for
-			for (row = diagonal_index; row < size; row++) {
-				if (fabs(initial_mat[row][temp_row_index_max]) < fabs(initial_mat[row][diagonal_index])) {
-					temp_row_index_max = row;
-				}
-			}
 		
-			if (temp_row_value_max > largest) {
-				largest = temp_row_value_max;					
+		for (row = diagonal_index; row < size; row++) {
+			if (fabs(initial_mat[row][temp_row_index_max]) < fabs(initial_mat[row][diagonal_index])) {
+				temp_row_index_max = row;
 			}
 		}
 		// Swap
@@ -94,11 +74,10 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 			row_index[diagonal_index] = row_index[temp_row_index_max];
 			row_index[temp_row_index_max] = temp;
 		}
-		# pragma omp task for private(factorial_elim)
+		
 		for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {
 			factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
 							 initial_mat[row_index[diagonal_index]][diagonal_index];
-			# pragma omp task for
 			for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
 				initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim * initial_mat[row_index[diagonal_index]][column_elim_index];
 			}
@@ -109,7 +88,6 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 void jord_elim(double** initial_mat, int* row_index, int size) {
 	int diagonal_index, row_elim_index;
 	double factorial_elim;
-	# pragma omp task for private(factorial_elim)
 	for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
 		for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
 			factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
@@ -122,7 +100,6 @@ void jord_elim(double** initial_mat, int* row_index, int size) {
 
 void store_result(double **initial_mat, double* result_mat, int* row_index, int size) {
 	int i;
-	# pragma omp task for
 	for (i = 0; i < size; i++) {
 		result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
 	}
@@ -130,7 +107,6 @@ void store_result(double **initial_mat, double* result_mat, int* row_index, int 
 
 void fill_in_matrix(int* row_index, int size) {
 	int i;
-	# pragma omp task for
 	for (i = 0; i < size; ++i) {
         	row_index[i] = i;
 	}
