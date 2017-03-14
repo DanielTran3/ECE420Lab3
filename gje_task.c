@@ -5,6 +5,10 @@
 #include "Lab3IO.h"
 #include "timer.h"
 
+void gaussian_elim() {
+
+}
+
 int main(int argc, char *argv[]) {
 	
 	# pragma omp_set_num_threads(atoi(argv[1]));
@@ -49,68 +53,70 @@ int main(int argc, char *argv[]) {
 		/*Gaussian elimination*/
 		# pragma omp parallel private (temp_row_index_max, temp_row_value_max) num_threads(thread_count)
 		{
-		# pragma omp single
-        	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
-				// Pivoting
-				temp_row_index_max = diagonal_index;
-				temp_row_value_max = 0;
-				# pragma omp task for
-				{
-					for (row = diagonal_index; row < size; row++) {
-						if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
-							temp_row_index_max = row;
-							temp_row_value_max = fabs(initial_mat[row][temp_row_index_max]);
-						}
-					}
-				}
-				if (temp_row_value_max > largest) {
-					#pragma critical
+			# pragma omp single
+			{
+		    	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
+					// Pivoting
+					temp_row_index_max = diagonal_index;
+					temp_row_value_max = 0;
+					# pragma omp task for
 					{
-						if (temp_row_value_max > largest) {
-							largest = temp_row_value_max;					
+						for (row = diagonal_index; row < size; row++) {
+							if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
+								temp_row_index_max = row;
+								temp_row_value_max = fabs(initial_mat[row][temp_row_index_max]);
+							}
 						}
 					}
-				}
-				// Swap
-				if (diagonal_index != temp_row_index_max) {
-					temp = row_index[diagonal_index];
-					row_index[diagonal_index] = row_index[temp_row_index_max];
-					row_index[temp_row_index_max] = temp;
-				}
-
-				# pragma omp task for private(factorial_elim)
-				{
-					for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {				
-						factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-										 initial_mat[row_index[diagonal_index]][diagonal_index];
-						# pragma omp task for
+					if (temp_row_value_max > largest) {
+						#pragma critical
 						{
-							for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-								initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
-								initial_mat[row_index[diagonal_index]][column_elim_index];
+							if (temp_row_value_max > largest) {
+								largest = temp_row_value_max;					
+							}
+						}
+					}
+					// Swap
+					if (diagonal_index != temp_row_index_max) {
+						temp = row_index[diagonal_index];
+						row_index[diagonal_index] = row_index[temp_row_index_max];
+						row_index[temp_row_index_max] = temp;
+					}
+
+					# pragma omp task for private(factorial_elim)
+					{
+						for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {				
+							factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+											 initial_mat[row_index[diagonal_index]][diagonal_index];
+							# pragma omp task for
+							{
+								for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+									initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
+									initial_mat[row_index[diagonal_index]][column_elim_index];
+								}
 							}
 						}
 					}
 				}
-			}
 
-			// Jordan Elimination
-			for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
-				# pragma omp task for private(factorial_elim)
-				{
-					for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
-						factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-										 initial_mat[row_index[diagonal_index]][diagonal_index];
-						initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
-						initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
+				// Jordan Elimination
+				for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
+					# pragma omp task for private(factorial_elim)
+					{
+						for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
+							factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+											 initial_mat[row_index[diagonal_index]][diagonal_index];
+							initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
+							initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
+						}
 					}
 				}
-			}
 		
-			# pragma omp task for
-			{
-				for (i = 0; i < size; i++) {
-					result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
+				# pragma omp task for
+				{
+					for (i = 0; i < size; i++) {
+						result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
+					}
 				}
 			}
 		}

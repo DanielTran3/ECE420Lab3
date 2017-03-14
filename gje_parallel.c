@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
 	double* result_mat;
 	int* row_index;
 	int size_check;
-	int i, row, column, temp, temp_row_index_max, temp_row_value_max, diagonal_index, row_elim_index, column_elim_index, size;
+	int i, row, temp, temp_row_index_max, temp_row_value_max, diagonal_index, row_elim_index, column_elim_index, size;
 	double start_time, end_time, factorial_elim, largest;
 	FILE* fp;
 	Lab3LoadInput(&initial_mat, &size);
@@ -33,13 +33,10 @@ int main(int argc, char *argv[]) {
 	
 	// See about making this part parallel (Starting)
 	# pragma omp parallel for 
-	{
-		for (i = 0; i < size; ++i) {
-			row_index[i] = i;
-		}
+	for (i = 0; i < size; ++i) {
+		row_index[i] = i;
 	}
-
-
+	
 	if (size == 1) {
         result_mat[0] = initial_mat[0][1] / initial_mat[0][0];
 	}
@@ -47,27 +44,26 @@ int main(int argc, char *argv[]) {
 	else {
 		GET_TIME(start_time);
 		/*Gaussian elimination*/
-		# pragma omp parallel private (temp_row_index_max, temp_row_value_max) num_threads(thread_count)
+		largest = 0;		
+		printf("qqq\n");	
+		# pragma omp parallel private (temp_row_index_max, temp_row_value_max) num_threads(thread_count) reduction(max:largest)
 		{
-        	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
+    		printf("qqq\n");    
+			for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
+				printf("diagonal_index: %i\n", diagonal_index);
 				// Pivoting
 				temp_row_index_max = diagonal_index;
 				temp_row_value_max = 0;
 				# pragma omp for
-				{
-					for (row = diagonal_index; row < size; row++) {
-						if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
-							temp_row_index_max = row;
-							temp_row_value_max = fabs(initial_mat[row][temp_row_index_max]);
-						}
+				for (row = diagonal_index; row < size; row++) {
+					if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
+						temp_row_index_max = row;
+						temp_row_value_max = fabs(initial_mat[row][temp_row_index_max]);
 					}
 				}
 				if (temp_row_value_max > largest) {
-					#pragma critical
-					{
-						if (temp_row_value_max > largest) {
-							largest = temp_row_value_max;					
-						}
+					if (temp_row_value_max > largest) {
+						largest = temp_row_value_max;					
 					}
 				}
 				// Swap
@@ -78,17 +74,12 @@ int main(int argc, char *argv[]) {
 				}
 
 				# pragma omp for private(factorial_elim)
-				{
-					for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {				
-						factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-										 initial_mat[row_index[diagonal_index]][diagonal_index];
-						# pragma omp for
-						{
-							for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-								initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
-								initial_mat[row_index[diagonal_index]][column_elim_index];
-							}
-						}
+				for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {				
+					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+									 initial_mat[row_index[diagonal_index]][diagonal_index];
+					for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+						initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
+						initial_mat[row_index[diagonal_index]][column_elim_index];
 					}
 				}
 			}
@@ -96,24 +87,22 @@ int main(int argc, char *argv[]) {
 			// Jordan Elimination
 			for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
 				# pragma omp for private(factorial_elim)
-				{
-					for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
-						factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-										 initial_mat[row_index[diagonal_index]][diagonal_index];
-						initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
-						initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
-					}
+				for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
+					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+									 initial_mat[row_index[diagonal_index]][diagonal_index];
+					initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
+					initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
 				}
 			}
 		
 			# pragma omp for
-			{
-				for (i = 0; i < size; i++) {
-					result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
-				}
+			for (i = 0; i < size; i++) {
+				result_mat[i] = initial_mat[row_index[i]][size] / initial_mat[row_index[i]][i];
 			}
 		}
 		GET_TIME(end_time);
 	}
+	
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+	return 0;
 }
