@@ -1,4 +1,4 @@
-Remember to change the exit value of the wrong case to -1 !!!
+//Remember to change the exit value of the wrong case to -1 !!!
 /*
 Test the result stored in the "data_output" by a serial version of calculation
 
@@ -90,8 +90,10 @@ int main(int argc, char* argv[])
 	printf("The relative error to the reference solution is %e\n", error / Xnorm);
 	if (error / Xnorm <= TOL)
 		printf("Congratulation!!! Your result is accepted!\n");
-	else
+	else {
 		printf("Sorry, your result is wrong.\n");
+		return -1;
+	}
 	
 	fclose(fp);
     DestroyVec(X);
