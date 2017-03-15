@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
 
 		GET_TIME(end_time);
 	}
-	Lab3SaveOutput(result_mat, size, end_time - start_time);
+	printf("%f\n", end_time - start_time);
+	//Lab3SaveOutput(result_mat, size, end_time - start_time);
 	return 0;
 }

@@ -141,10 +141,13 @@ void elim_under_diag(double** initial_mat, int* row_index, int size) {
 	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
 		for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {
 			factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-							 initial_mat[row_index[diagonal_index]][diagonal_index];			
-			for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-				initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim * 
-				initial_mat[row_index[diagonal_index]][column_elim_index];
+							 initial_mat[row_index[diagonal_index]][diagonal_index];
+				
+					for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+						initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim * 
+						initial_mat[row_index[diagonal_index]][column_elim_index];
+					}
+				}
 			}
 		}
 	}
