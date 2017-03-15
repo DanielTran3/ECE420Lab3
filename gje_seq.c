@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 	double* result_mat;
 	int* row_index;
 	int size_check;
-	int i, row, column, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
+	int i, row, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
 	double start_time, end_time, factorial_elim;
 	FILE* fp;
 	
@@ -81,4 +81,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+	return 0;
 }
