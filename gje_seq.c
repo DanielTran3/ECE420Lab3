@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
 	double* result_mat;
 	int* row_index;
 	int size_check;
-	int i, row, column, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
+	int i, row, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
 	double start_time, end_time, factorial_elim;
 	FILE* fp;
 	
@@ -66,9 +66,9 @@ int main(int argc, char *argv[]) {
 
 		// Jordan Elimination
 		for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
-			for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
+			for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {	
 				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-								 initial_mat[row_index[diagonal_index]][diagonal_index];
+								 initial_mat[row_index[diagonal_index]][diagonal_index];			
 				initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
 				initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
 			}
@@ -81,4 +81,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+	return 0;
 }

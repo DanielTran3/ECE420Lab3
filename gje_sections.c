@@ -45,21 +45,22 @@ int main(int argc, char *argv[]) {
 		// Gaussian elimination
 		# pragma omp parallel num_threads(thread_count)
 		{
-			# pragma omp single
+			# pragma omp parallel sections
 			{
-				# pragma omp task
+				# pragma omp section
 				gaus_elim(initial_mat, row_index, size);
-				# pragma omp taskwait
-
-				# pragma omp task				
+			}
+			# pragma omp parallel sections
+			{			
+				# pragma omp section
 				// Jordan Elimination
-				jord_elim(initial_mat, row_index, size);
-				# pragma omp taskwait		
-
-				# pragma omp task
+				jord_elim(initial_mat, row_index, size);		
+			}
+			# pragma omp parallel sections
+			{
+				# pragma omp section
 				// Store Result
-				store_result(initial_mat, result_mat, row_index, size);
-				# pragma omp taskwait			
+				store_result(initial_mat, result_mat, row_index, size);			
 			}
 		}
 		GET_TIME(end_time);
@@ -75,7 +76,7 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
 		// Pivoting
 		temp_row_index_max = diagonal_index;
-		
+
 		for (row = diagonal_index; row < size; row++) {
 			if (fabs(initial_mat[row][temp_row_index_max]) < fabs(initial_mat[row][diagonal_index])) {
 				temp_row_index_max = row;
@@ -87,12 +88,13 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 			row_index[diagonal_index] = row_index[temp_row_index_max];
 			row_index[temp_row_index_max] = temp;
 		}
-		
+
 		for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {
 			factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
 							 initial_mat[row_index[diagonal_index]][diagonal_index];
 			for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-				initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim * initial_mat[row_index[diagonal_index]][column_elim_index];
+				initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim * 
+				initial_mat[row_index[diagonal_index]][column_elim_index];
 			}
 		}
 	}
@@ -101,12 +103,12 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 void jord_elim(double** initial_mat, int* row_index, int size) {
 	int diagonal_index, row_elim_index;
 	double factorial_elim;
-	for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
+	for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {	
 		for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
 			factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
 							 initial_mat[row_index[diagonal_index]][diagonal_index];
 			initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
-			initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
+			initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];
 		}
 	}
 }

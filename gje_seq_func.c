@@ -15,8 +15,8 @@ int main(int argc, char *argv[]) {
 	double* result_mat;
 	int* row_index;
 	int size_check;
-	int i, row, column, temp, temp_row_index_max, diagonal_index, row_elim_index, column_elim_index, size;
-	double start_time, end_time, factorial_elim;
+	int size;
+	double start_time, end_time;
 	FILE* fp;
 	
 	Lab3LoadInput(&initial_mat, &size);
@@ -54,6 +54,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+	return 0;
 }
 
 void gaus_elim(double** initial_mat, int* row_index, int size) {
