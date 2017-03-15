@@ -92,7 +92,7 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 	// Factorial multipler for row subtraction
 	double factorial_elim;
 
-	// Cycle through diagonal rules
+	// Cycle through diagonal indexes
 	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
 		
 		// Keep track of the index with the highest value
