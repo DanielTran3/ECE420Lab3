@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
 			// Pivoting
 			temp_row_index_max = diagonal_index;
 			temp_row_value_max = 0;
-			# pragma omp parallel num_threads(thread_count) reduction(max:largest)
+			# pragma omp parallel num_threads(thread_count) 
 			{			
-				# pragma omp for
+				# pragma omp for private(temp_row_index_max, temp_row_value_max) schedule(guided,1)
 				for (row = diagonal_index; row < size; row++) {
 					if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
 						temp_row_index_max = row;
@@ -59,35 +59,32 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				if (temp_row_value_max > largest) {
-					if (temp_row_value_max > largest) {
-						largest = temp_row_value_max;					
+					largest = temp_row_value_max;
+				}
+				// Swap
+				if (diagonal_index != temp_row_index_max) {
+					temp = row_index[diagonal_index];
+					row_index[diagonal_index] = row_index[temp_row_index_max];
+					row_index[temp_row_index_max] = temp;
+				}
+
+				# pragma omp for private(factorial_elim, column_elim_index) schedule(guided,1)
+				for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
+					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+							initial_mat[row_index[diagonal_index]][diagonal_index];			
+					for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+						initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
+						initial_mat[row_index[diagonal_index]][column_elim_index];
 					}
 				}
 			}
-			// Swap
-			if (diagonal_index != temp_row_index_max) {
-				temp = row_index[diagonal_index];
-				row_index[diagonal_index] = row_index[temp_row_index_max];
-				row_index[temp_row_index_max] = temp;
-			}
-
-			# pragma omp parallel for private(factorial_elim, column_elim_index) num_threads(thread_count) shared(initial_mat, row_index, diagonal_index)
-			for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
-				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-								 initial_mat[row_index[diagonal_index]][diagonal_index];			
-				for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-					initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
-					initial_mat[row_index[diagonal_index]][column_elim_index];
-				}
-			}
 		}
-
 		// Jordan Elimination
 		for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
-			# pragma omp parallel for private(factorial_elim) num_threads(thread_count)			
+			# pragma omp parallel for private(factorial_elim) num_threads(thread_count)	schedule(guided,1)		
 			for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
 				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-								 initial_mat[row_index[diagonal_index]][diagonal_index];
+								initial_mat[row_index[diagonal_index]][diagonal_index];
 				initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
 				initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
 			}
