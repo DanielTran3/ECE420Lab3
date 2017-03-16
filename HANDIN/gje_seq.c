@@ -76,8 +76,10 @@ int main(int argc, char *argv[]) {
 		// Get endtime
 		GET_TIME(end_time);
 	}
+
 	// Save result to file with the correct result and time elapsed
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+
 	return 0;
 }
 
@@ -90,7 +92,7 @@ void gaus_elim(double** initial_mat, int* row_index, int size) {
 	// Factorial multipler for row subtraction
 	double factorial_elim;
 
-	// Cycle through diagonal rules
+	// Cycle through diagonal indexes
 	for (diagonal_index = 0; diagonal_index < size - 1; diagonal_index++){
 		
 		// Keep track of the index with the highest value

@@ -72,11 +72,11 @@ int main(int argc, char *argv[]) {
 			temp_row_value_max = 0;
 
 			// Start team for parallel execution
-			# pragma omp parallel num_threads(thread_count) 
-			{			
-
-				// Cycle through loop in parallel to find max value and row index	
-				# pragma omp for private(temp_row_index_max, temp_row_value_max) schedule(guided,1)
+			# pragma omp parallel num_threads(thread_count) reduction(max:largest)
+			{	
+	
+				// Cycle through loop in parallel to find max value and row index		
+				# pragma omp for
 				for (row = diagonal_index; row < size; row++) {
 					if (temp_row_value_max < fabs(initial_mat[row][diagonal_index])) {
 						temp_row_index_max = row;
@@ -86,38 +86,40 @@ int main(int argc, char *argv[]) {
 
 				// Finds the largest value from team
 				if (temp_row_value_max > largest) {
-					largest = temp_row_value_max;
-				}
-
-				// Swap the row with the highest value to correct spot
-				if (diagonal_index != temp_row_index_max) {
-					temp = row_index[diagonal_index];
-					row_index[diagonal_index] = row_index[temp_row_index_max];
-					row_index[temp_row_index_max] = temp;
-				}
-
-				// Run team in parallel to create an upper triangle by manipulating rows to add/subtract
-				# pragma omp for private(factorial_elim, column_elim_index) schedule(guided,1)
-				for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
-					factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-							initial_mat[row_index[diagonal_index]][diagonal_index];			
-					for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
-						initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
-						initial_mat[row_index[diagonal_index]][column_elim_index];
+					if (temp_row_value_max > largest) {
+						largest = temp_row_value_max;					
 					}
 				}
 			}
+
+			// Swap the row with the highest value to correct spot
+			if (diagonal_index != temp_row_index_max) {
+				temp = row_index[diagonal_index];
+				row_index[diagonal_index] = row_index[temp_row_index_max];
+				row_index[temp_row_index_max] = temp;
+			}
+
+			// Run team in parallel to create an upper triangle by manipulating rows to add/subtract
+			# pragma omp parallel for private(factorial_elim, column_elim_index) num_threads(thread_count) shared(initial_mat, row_index, diagonal_index)
+			for (row_elim_index = diagonal_index + 1; row_elim_index < size; row_elim_index++) {	
+				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
+								 initial_mat[row_index[diagonal_index]][diagonal_index];			
+				for (column_elim_index = diagonal_index; column_elim_index < size + 1; column_elim_index++) {
+					initial_mat[row_index[row_elim_index]][column_elim_index] -= factorial_elim *
+					initial_mat[row_index[diagonal_index]][column_elim_index];
+				}
+			}
 		}
-		
+
 		/* Jordan Elimination */
 		// Start from bottom-up and remove portions in upper triangle so that only one variable is left. (Diagonal of values)
 		for (diagonal_index = size - 1; diagonal_index > 0; diagonal_index--) {
-
+			
 			// Run team in parallel to remove corresponding variables in the rows above the current one
-			# pragma omp parallel for private(factorial_elim) num_threads(thread_count)	schedule(guided,1)		
+			# pragma omp parallel for private(factorial_elim) num_threads(thread_count)			
 			for (row_elim_index = diagonal_index - 1; row_elim_index >= 0; row_elim_index--) {
 				factorial_elim = initial_mat[row_index[row_elim_index]][diagonal_index] / 
-								initial_mat[row_index[diagonal_index]][diagonal_index];
+								 initial_mat[row_index[diagonal_index]][diagonal_index];
 				initial_mat[row_index[row_elim_index]][diagonal_index] = 0;
 				initial_mat[row_index[row_elim_index]][size] -= factorial_elim * initial_mat[row_index[diagonal_index]][size];		
 			}
@@ -132,7 +134,9 @@ int main(int argc, char *argv[]) {
 		// Get endtime
 		GET_TIME(end_time);
 	}
+
 	// Save result to file with the correct result and time elapsed
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+
 	return 0;
 }

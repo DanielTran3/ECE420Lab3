@@ -132,7 +132,9 @@ int main(int argc, char *argv[]) {
 		// Get endtime
 		GET_TIME(end_time);
 	}
+
 	// Save result to file with the correct result and time elapsed
 	Lab3SaveOutput(result_mat, size, end_time - start_time);
+
 	return 0;
 }
